@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>УРВ · ВЖДО — Табель ЦА</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-dark:   #060B10;
+  --neon-cyan: #00F0FF;
+  --neon-cyan-dim: rgba(0, 240, 255, 0.2);
+  --neon-gold: #FFD700;
+  --neon-magenta: #FF0055;
+  --glass-bg:  rgba(13, 22, 33, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: blur(16px);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --paper:   var(--bg-dark);
+  --card:    var(--glass-bg);
+  --line:    rgba(255, 255, 255, 0.1);
+  --ink:     #E2E8F0;
+  --mute:    #8B9BB4;
+  --go:      #39FF14;
+  --go-bg:   rgba(57, 255, 20, 0.15);
+  --warn:    #FFEA00;
+  --warn-bg: rgba(255, 234, 0, 0.15);
+  --stop:    #FF073A;
+  --stop-bg: rgba(255, 7, 58, 0.15);
+  --rest:    rgba(255, 255, 255, 0.05);
+  --r: 16px;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html{ scroll-behavior:smooth; }
+body{
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  background-color: var(--bg-dark);
+  background-image: radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.08), transparent 25%), radial-gradient(circle at 85% 30%, rgba(255, 215, 0, 0.05), transparent 25%);
+  background-attachment: fixed; color:var(--ink); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+.wrap{ max-width:1180px; margin:0 auto; padding:0 24px; position: relative; z-index: 2; }
+
+/* Шапка */
+header{ background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border-bottom: 1px solid var(--glass-border); position:sticky; top:0; z-index:40; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); }
+.head{ display:flex; align-items:center; gap:20px; height:70px; }
+.mark{ display:flex; align-items:center; gap:11px; text-decoration:none; color:inherit; }
+.mark svg{ display:block; filter: drop-shadow(0 0 5px var(--neon-cyan)); }
+.mark .t1{ font-family:'Oswald',sans-serif; font-weight:600; font-size:18px; letter-spacing:.18em; text-transform:uppercase; line-height:1; color: #fff; text-shadow: 0 0 8px var(--neon-cyan-dim); }
+.mark .t2{ font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--neon-cyan); margin-top:3px; line-height:1; }
+.spacer{ flex:1; }
+.btn{ font:inherit; font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--line); background:var(--rest); color:var(--ink); border-radius:9px; padding:8px 14px; transition:all .2s ease; backdrop-filter: blur(4px); }
+.btn:hover{ border-color:var(--neon-cyan); color:var(--neon-cyan); box-shadow: 0 0 15px var(--neon-cyan-dim); }
+.btn.solid{ background: transparent; border-color:var(--neon-cyan); color:var(--neon-cyan); box-shadow: inset 0 0 10px var(--neon-cyan-dim), 0 0 10px var(--neon-cyan-dim); }
+.btn.solid:hover{ background:var(--neon-cyan); color:#000; box-shadow: 0 0 20px var(--neon-cyan); }
+:focus-visible{ outline:none; box-shadow: 0 0 0 2px var(--neon-cyan); }
+
+/* Табло */
+.board{ padding:40px 0 10px; position:relative; overflow:hidden; }
+.board-top{ display:flex; align-items:baseline; gap:14px; margin-bottom:22px; }
+.board-top h1{ font-family:'Oswald',sans-serif; font-weight:500; font-size:22px; letter-spacing:.16em; text-transform:uppercase; color:#fff; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+
+/* Индикатор статуса и Tooltip */
+.live{ display:inline-flex; align-items:center; gap:7px; font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--neon-cyan); cursor: help; position: relative; }
+.live i{ width:8px; height:8px; border-radius:50%; background:var(--neon-cyan); box-shadow:0 0 12px var(--neon-cyan); animation:beacon 2s infinite; }
+.live.err i{ background:var(--stop); box-shadow:0 0 12px var(--stop); color: var(--stop); animation:none; }
+.live.err{ color: var(--stop); }
+.live[data-err]::after {
+  content: attr(data-err); position: absolute; top: calc(100% + 12px); left: 0;
+  background: rgba(10, 15, 25, 0.95); color: #fff; border: 1px solid rgba(255, 7, 58, 0.4);
+  padding: 12px 16px; border-radius: 8px; font-size: 12px; font-family: 'Inter', sans-serif;
+  text-transform: none; letter-spacing: normal; white-space: pre-wrap; width: 320px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+  opacity: 0; visibility: hidden; transition: all 0.2s ease; z-index: 100;
+}
+.live[data-err]:hover::after { opacity: 1; visibility: visible; transform: translateY(0); }
+@keyframes beacon{ 0%,100%{opacity:1; box-shadow:0 0 12px currentColor;} 50%{opacity:.4; box-shadow:0 0 2px currentColor;} }
+
+.kpis{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+.kpi{ padding:20px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--r); backdrop-filter: var(--glass-blur); box-shadow: var(--glass-shadow); position: relative; overflow: hidden; }
+.kpi::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent); opacity: 0.5; }
+.kpi .val{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:clamp(28px,3.6vw,44px); letter-spacing:.01em; color:var(--neon-gold); line-height:1.05; display:flex; text-shadow: 0 0 15px rgba(255, 215, 0, 0.4); }
+.kpi.accent::before { background: linear-gradient(90deg, transparent, var(--neon-magenta), transparent); }
+.kpi.accent .val{ color:var(--neon-magenta); text-shadow: 0 0 15px rgba(255, 0, 85, 0.4); }
+.kpi .lbl{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--mute); margin-top:9px; }
+.flap{ display:inline-block; position:relative; transform-origin:50% 100%; }
+.flap.flip{ animation:flap .11s linear; }
+@keyframes flap{ 0%{ transform:rotateX(0deg); opacity:1; } 49%{ transform:rotateX(-88deg); opacity:.25; } 50%{ transform:rotateX(88deg); opacity:.25; } 100%{ transform:rotateX(0deg); opacity:1; } }
+
+.rail{ position:relative; height:22px; margin: 30px 0; }
+.rail::before, .rail::after{ content:''; position:absolute; left:0; right:0; height:1px; background:var(--neon-cyan); box-shadow: 0 0 5px var(--neon-cyan); opacity: 0.5; }
+.rail::before{ top:7px; } .rail::after{ top:13px; }
+.rail .ties{ position:absolute; inset:0; display:flex; justify-content:space-between; }
+.rail .ties i{ width:2px; height:22px; background:rgba(0, 240, 255, 0.2); }
+
+/* Фильтры и Списки */
+main{ padding:10px 0 70px; }
+.sec-h{ display:flex; align-items:center; gap:12px; margin:0 0 20px; flex-wrap: wrap;}
+.sec-h h2{ font-family:'Oswald',sans-serif; font-weight:500; font-size:16px; letter-spacing:.16em; text-transform:uppercase; color:#fff; }
+.sec-h .count{ font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--neon-cyan); background:var(--neon-cyan-dim); border:1px solid rgba(0,240,255,0.3); border-radius:20px; padding:2px 10px; box-shadow: 0 0 10px rgba(0,240,255,0.1); }
+.sec-h .sp{ flex:1; }
+
+.tools{ display:flex; gap:12px; align-items:center; flex-wrap: wrap; width: 100%; justify-content: flex-end; }
+.filter-group { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 12px; border: 1px solid var(--glass-border); }
+.filter-group label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--mute); margin-left: 4px; }
+.search, select.sort { font:inherit; font-size:13px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.3); backdrop-filter: blur(4px); border-radius:9px; padding:8px 12px; color:#fff; transition: all 0.2s; }
+.search::placeholder{ color:var(--mute); }
+.search:focus, select.sort:focus{ outline:none; border-color:var(--neon-cyan); box-shadow: 0 0 15px var(--neon-cyan-dim); background:rgba(0,0,0,0.5); }
+select.sort option { background: var(--bg-dark); color: #fff; }
+
+/* Принудительная темная тема для календарей и часов */
+input[type="date"], input[type="time"] { color-scheme: dark; cursor: pointer; }
+
+.alerts{ display:flex; gap:12px; overflow-x:auto; padding-bottom:12px; margin-bottom:34px; }
+.alerts::-webkit-scrollbar{ height:6px; }
+.alerts::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:6px; }
+.alert{ flex:0 0 auto; background:var(--card); border:1px solid var(--glass-border); border-left:3px solid var(--stop); border-radius:11px; padding:15px; min-width:260px; cursor:pointer; transition:all .2s ease; backdrop-filter: var(--glass-blur); box-shadow: var(--glass-shadow); }
+.alert:hover{ box-shadow: 0 8px 32px rgba(255, 7, 58, 0.15), inset 0 0 20px rgba(255, 7, 58, 0.05); transform:translateY(-2px); border-color: rgba(255, 7, 58, 0.3); }
+.alert.warn{ border-left-color:var(--warn); }
+.alert.warn:hover { box-shadow: 0 8px 32px rgba(255, 234, 0, 0.1), inset 0 0 20px rgba(255, 234, 0, 0.05); border-color: rgba(255, 234, 0, 0.3); }
+.alert .who{ font-weight:600; font-size:14px; color:#fff; }
+.alert .what{ font-size:12px; color:var(--mute); margin-top:5px; }
+.alert .what b{ font-family:'IBM Plex Mono',monospace; color:var(--ink); font-weight:600; }
+
+.people{ display:flex; flex-direction:column; gap:12px; }
+.person{ background:var(--card); border:1px solid var(--glass-border); border-radius:var(--r); padding:18px 22px; display:grid; grid-template-columns:1fr 280px 320px; gap:22px; align-items:center; cursor:pointer; transition:all .25s ease; backdrop-filter: var(--glass-blur); box-shadow: var(--glass-shadow); position:relative; opacity:0; overflow: hidden; animation:rise .5s cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes rise{ from{opacity:0; transform:translateY(15px)} to{opacity:1; transform:none} }
+.person:hover{ box-shadow: 0 10px 40px rgba(0, 240, 255, 0.1); border-color:var(--neon-cyan-dim); transform:translateY(-2px); }
+.person::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--neon-cyan); box-shadow: 0 0 10px var(--neon-cyan); transform:scaleY(0); transform-origin:center; transition:transform .3s ease; }
+.person:hover::before{ transform:scaleY(1); }
+.who-name{ font-weight:600; font-size:15px; letter-spacing:-.005em; color: #fff; }
+.who-sub{ font-size:11.5px; color:var(--mute); margin-top:4px; font-family:'IBM Plex Mono',monospace; }
+
+.track{ position:relative; padding:12px 0; }
+.track .line{ position:absolute; left:0; right:0; top:50%; height:1px; background:var(--line); transform:translateY(-.5px); }
+.track .ties{ position:relative; display:flex; gap:3px; height:24px; }
+.tie{ flex:1; border-radius:3px; background:var(--rest); position:relative; transform:scaleY(.3); transform-origin:center; transition: all 0.2s; animation:tie .5s cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes tie{ to{ transform:scaleY(1) } }
+.tie.ok{ background:var(--go); box-shadow: 0 0 5px rgba(57, 255, 20, 0.4); }
+.tie.late{ background:var(--warn); box-shadow: 0 0 5px rgba(255, 234, 0, 0.4); }
+.tie.miss{ background:var(--stop); box-shadow: 0 0 5px rgba(255, 7, 58, 0.4); }
+.tie.off{ background:rgba(255,255,255,0.15); }
+.tie.none{ background:rgba(255,255,255,0.03); }
+.tie:hover{ filter:brightness(1.3); transform: scaleY(1.2) !important; z-index: 2; }
+.tie[data-tip]:hover::after{ content:attr(data-tip); position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.9); color:var(--neon-cyan); border: 1px solid var(--neon-cyan-dim); box-shadow: 0 0 10px rgba(0,240,255,0.2); font-size:11px; white-space:nowrap; padding:6px 10px; border-radius:6px; font-family:'IBM Plex Mono',monospace; z-index:5; pointer-events:none; }
+
+.nums{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; text-align:right; }
+.num .v{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:15px; color:#fff; }
+.num .k{ font-size:9.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--mute); margin-top:4px; }
+.num .v.warn{ color:var(--warn); text-shadow: 0 0 8px rgba(255, 234, 0, 0.4); } 
+.num .v.stop{ color:var(--stop); text-shadow: 0 0 8px rgba(255, 7, 58, 0.4); } 
+.num .v.dim{ color:rgba(255,255,255,0.2); }
+.empty{ background:var(--card); border:1px dashed var(--glass-border); border-radius:var(--r); padding:50px; text-align:center; color:var(--mute); font-size:14px; backdrop-filter: var(--glass-blur); }
+
+/* Боковая панель */
+.scrim{ position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter: blur(3px); z-index:60; opacity:0; pointer-events:none; transition:opacity .3s; }
+.scrim.on{ opacity:1; pointer-events:auto; }
+.drawer{ position:fixed; top:0 ; right:0; bottom:0; width:min(500px,100%); background: rgba(10, 15, 25, 0.85); backdrop-filter: blur(20px); border-left: 1px solid var(--glass-border); z-index:70; transform:translateX(101%); transition:transform .4s cubic-bezier(.2,.8,.2,1); overflow-y:auto; box-shadow:-10px 0 50px rgba(0,240,255,0.05); }
+.drawer.on{ transform:none; }
+.drawer-h{ background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--glass-border); color:#fff; padding:30px 24px 24px; position:relative; }
+.drawer-h .nm{ font-family:'Oswald',sans-serif; font-size:22px; font-weight:500; letter-spacing:.05em; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+.drawer-h .sb{ font-size:12px; color:var(--neon-cyan); margin-top:6px; font-family:'IBM Plex Mono',monospace; }
+.close{ position:absolute; top:20px; right:20px; width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid transparent; color:var(--mute); font-size:22px; cursor:pointer; line-height:1; transition: all 0.2s; }
+.close:hover{ background:rgba(255,7,58,0.1); color:var(--stop); border-color: rgba(255,7,58,0.3); }
+.drawer-sum{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:20px 24px; background: rgba(0,240,255,0.02); border-bottom: 1px solid var(--glass-border); }
+.drawer-sum .v{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:17px; color:var(--neon-gold); text-shadow: 0 0 10px rgba(255,215,0,0.3); }
+.drawer-sum .k{ font-size:9.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--mute); margin-top:4px; }
+.days{ padding:20px 24px 50px; }
+.day{ display:grid; grid-template-columns:56px 1fr 62px 62px; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:13.5px; transition: background 0.2s; border-radius: 6px; }
+.day:hover { background: rgba(255,255,255,0.02); padding-left: 5px; }
+.day .dt{ font-family:'IBM Plex Mono',monospace; font-weight:600; color: #fff; font-size: 13px; }
+.day .st{ font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; justify-self:start; letter-spacing: 0.05em; text-transform: uppercase; }
+.st.ok{ background:var(--go-bg); color:var(--go); border: 1px solid rgba(57, 255, 20, 0.2); }
+.st.late{ background:var(--warn-bg); color:var(--warn); border: 1px solid rgba(255, 234, 0, 0.2); }
+.st.miss{ background:var(--stop-bg); color:var(--stop); border: 1px solid rgba(255, 7, 58, 0.2); }
+.st.off{ background:rgba(255,255,255,0.05); color:var(--mute); }
+.day .tm{ font-family:'IBM Plex Mono',monospace; text-align:right; font-size:13px; color: var(--neon-cyan); }
+.day .tm.dim{ color:rgba(255,255,255,0.2); }
+
+/* Модалка настроек */
+.modal-bg{ position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index:80; display:none; align-items:center; justify-content:center; padding:24px; }
+.modal-bg.on{ display:flex; }
+.modal{ background: rgba(13, 22, 33, 0.85); border: 1px solid var(--neon-cyan-dim); border-radius:20px; padding:32px; width:min(580px,100%); box-shadow: 0 0 40px rgba(0, 240, 255, 0.15); backdrop-filter: blur(20px); }
+.modal h3{ font-family:'Oswald',sans-serif; font-size:19px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; margin-bottom:14px; color: #fff; }
+.modal p{ font-size: 13px; color: var(--mute); margin-bottom: 16px; line-height: 1.6; }
+.modal textarea { width:100%; font:inherit; font-size:12px; border:1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.4); color: #fff; border-radius:12px; padding:13px 15px; margin-bottom:16px; font-family:'IBM Plex Mono',monospace; transition: all 0.2s; resize: vertical; height: 160px; white-space: pre; }
+.modal textarea:focus{ outline:none; border-color:var(--neon-cyan); box-shadow: 0 0 15px var(--neon-cyan-dim); }
+.modal .row{ display:flex; gap:12px; justify-content:flex-end; }
+.msg{ font-size:13px; margin-bottom:16px; padding:12px 15px; border-radius:10px; display:none; border: 1px solid transparent; }
+.msg.err{ display:block; background:var(--stop-bg); color:var(--stop); border-color: rgba(255,7,58,0.3); }
+
+footer{ border-top:1px solid var(--glass-border); padding:24px 0 40px; font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--mute); display:flex; gap:24px; flex-wrap:wrap; position: relative; z-index: 2; }
+@media (max-width:900px){ .person{ grid-template-columns:1fr; gap:16px; } .nums{ text-align:left; } .kpis{ grid-template-columns:repeat(2,1fr); gap:14px; } .kpi:last-child{ grid-column:span 2; } }
+@media (max-width:800px){ .tools{ justify-content: flex-start; } .search{ flex:1; width:100%; min-width: 140px;} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head">
+    <a class="mark" href="#">
+      <svg width="32" height="32" viewBox="0 0 30 30" aria-hidden="true">
+        <rect width="30" height="30" rx="8" fill="#0A1118"/>
+        <path d="M8 22 L13.4 8 M22 22 L16.6 8" stroke="#00F0FF" stroke-width="2" stroke-linecap="round"/>
+        <path d="M7.2 18.5 H22.8 M8.6 14 H21.4 M10 9.5 H20" stroke="#FFD700" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <span><div class="t1">УРВ · ВЖДО</div><div class="t2">Табель центрального аппарата</div></span>
+    </a>
+    <div class="spacer"></div>
+    <button class="btn" id="openSetup">Источник данных</button>
+  </div>
+</header>
+
+<section class="board">
+  <div class="wrap">
+    <div class="board-top">
+      <h1>Итоги периода</h1>
+      <span class="live" id="liveTag"><i></i><span id="liveTxt">Загрузка...</span></span>
+    </div>
+    <div class="kpis" id="kpis"></div>
+  </div>
+  <div class="wrap"><div class="rail"><div class="ties" id="railTies"></div></div></div>
+</section>
+
+<main class="wrap">
+  <div id="alertBlock" style="display:none">
+    <div class="sec-h"><h2>Требуют внимания</h2><span class="count" id="alertCount">0</span></div>
+    <div class="alerts" id="alerts"></div>
+  </div>
+  <div class="sec-h">
+    <h2>Сотрудники</h2><span class="count" id="peopleCount">0</span>
+    <div class="tools">
+      <div class="filter-group">
+        <label>Период:</label>
+        <input type="date" id="fDateStart" class="search filter-trigger" title="Начало периода">
+        <input type="date" id="fDateEnd" class="search filter-trigger" title="Конец периода">
+      </div>
+      <div class="filter-group">
+        <label>Время:</label>
+        <input type="time" id="fTimeIn" class="search filter-trigger" title="Только пришедшие ПОСЛЕ">
+        <input type="time" id="fTimeOut" class="search filter-trigger" title="Только ушедшие ДО">
+      </div>
+      <input class="search filter-trigger" id="q" placeholder="Поиск по ФИО" autocomplete="off">
+      <select class="sort filter-trigger" id="sort">
+        <option value="name">По алфавиту</option>
+        <option value="worked">По отработанному</option>
+        <option value="late">По опозданиям</option>
+        <option value="miss">По аномалиям</option>
+      </select>
+    </div>
+  </div>
+  <div class="people" id="people"></div>
+</main>
+
+<footer class="wrap">
+  <span>ТОО «ВЖДО» · АО «НК «ҚТЖ»</span>
+  <span id="srcNote">Ожидание данных...</span>
+</footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-h">
+    <div class="nm" id="dName">—</div><div class="sb" id="dPhone">—</div>
+    <button class="close" id="dClose" aria-label="Закрыть">×</button>
+  </div>
+  <div class="drawer-sum" id="dSum"></div>
+  <div class="days" id="dDays"></div>
+</aside>
+
+<!-- Модалка для вставки данных -->
+<div class="modal-bg" id="setup">
+  <div class="modal">
+    <h3>Загрузка данных вручную</h3>
+    <p>Браузер блокирует скачивание по ссылке (настройки приватности Google). Чтобы дашборд заработал, просто скопируйте нужные строки из вашей таблицы Excel/Google (вместе с шапкой) и вставьте их в поле ниже:</p>
+    <div class="msg" id="setupMsg"></div>
+    <textarea id="csvPaste" placeholder="Вставьте скопированные ячейки сюда... (Ctrl+V)"></textarea>
+    <div class="row">
+      <button class="btn" id="setupCancel">Отмена</button>
+      <button class="btn solid" id="setupGo">Загрузить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Оригинальная ссылка, которая блокируется политикой CORS браузера
+const CSV_URL = "https://docs.google.com/spreadsheets/d/15T73XvTLGbI-bsjWX9N1-SyL-uaHWz8RsCCE8yCgtmU/gviz/tq?tqx=out:csv&sheet=Табель";
+
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const NBSP = '\u00A0';
+
+const toMin = s => { if(!s) return 0; const m = String(s).trim().match(/^(\d+):(\d{1,2})/); return m ? (+m[1])*60 + (+m[2]) : 0; };
+const fmt = m => { if(!m) return '—'; const sign = m<0 ? '-' : ''; m = Math.abs(m); return sign + Math.floor(m/60) + ':' + String(m%60).padStart(2,'0'); };
+const parseDate = s => { const m = String(s||'').match(/(\d{2})\.(\d{2})\.(\d{4})/); return m ? new Date(+m[3], +m[2]-1, +m[1]) : null; };
+
+let RAW_DATA = []; 
+let MODEL = null;
+
+function parseDataText(text){
+  const isTSV = text.includes('\t');
+  const rows=[]; let row=[], cell='', q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; } else cell+=c;
+    } else {
+      if(c==='"') q=true;
+      else if((!isTSV && c===',') || (isTSV && c==='\t')){ row.push(cell.trim()); cell=''; }
+      else if(c==='\n'){ row.push(cell.trim()); rows.push(row); row=[]; cell=''; }
+      else if(c!=='\r') cell+=c;
+    }
+  }
+  if(cell||row.length){ row.push(cell.trim()); rows.push(row); }
+  return rows.slice(1).filter(r => r.length >= 10); 
+}
+
+// ЕДИНЫЙ КОНВЕЙЕР: Фильтрация дней -> Подсчет итогов -> Фильтрация сотрудников -> Сортировка
+function applyFilters() {
+  if(!RAW_DATA || !RAW_DATA.length) return;
+  
+  // Получаем значения фильтров
+  const dFromStr = $('#fDateStart').value;
+  const dToStr = $('#fDateEnd').value;
+  let dFrom = null, dTo = null;
+  if(dFromStr) { const p = dFromStr.split('-'); dFrom = new Date(p[0], p[1]-1, p[2]); }
+  if(dToStr) { const p = dToStr.split('-'); dTo = new Date(p[0], p[1]-1, p[2]); dTo.setHours(23,59,59,999); }
+  
+  const tInStr = $('#fTimeIn').value;
+  const tOutStr = $('#fTimeOut').value;
+  const tIn = toMin(tInStr);
+  const tOut = toMin(tOutStr);
+  
+  const q = $('#q').value.trim().toLowerCase();
+  const by = $('#sort').value;
+
+  const map = new Map();
+
+  // 1. Фильтруем дни по дате и времени
+  RAW_DATA.forEach(r=>{
+    const date = parseDate(r[0]);
+    const phone = String(r[1]||'').trim();
+    const fio   = String(r[2]||'').trim();
+    if(!date || !phone || !fio) return;
+
+    if(dFrom && date < dFrom) return;
+    if(dTo && date > dTo) return;
+
+    const inTime = toMin(r[4]);
+    const outTime = toMin(r[5]);
+
+    if(tInStr && inTime > 0 && inTime < tIn) return; 
+    if(tOutStr && outTime > 0 && outTime > tOut) return;
+
+    const status = String(r[11]||'').trim();
+    const day = { date, scans:+(r[3]||0), inT:inTime, outT:outTime, late:toMin(r[6]), over:toMin(r[7]), worked:toMin(r[9]), wknd:toMin(r[10]), status };
+    
+    if(!map.has(phone)) map.set(phone,{phone, fio, days:[]});
+    map.get(phone).days.push(day);
+  });
+
+  let people = [...map.values()];
+
+  // 2. Фильтруем сотрудников по поиску ФИО
+  if (q) {
+    people = people.filter(p => p.fio.toLowerCase().includes(q) || p.phone.includes(q));
+  }
+
+  // 3. Подсчитываем Итоги по каждому человеку строго по отфильтрованным дням
+  people.forEach(p=>{
+    p.days.sort((a,b)=>a.date-b.date);
+    p.present = p.days.filter(d=>d.scans>0).length;
+    p.worked  = p.days.reduce((s,d)=>s+d.worked,0);
+    p.late    = p.days.reduce((s,d)=>s+d.late,0);
+    p.lateN   = p.days.filter(d=>d.late>0).length;
+    p.over    = p.days.reduce((s,d)=>s+d.over,0);
+    p.wknd    = p.days.reduce((s,d)=>s+d.wknd,0);
+    p.miss    = p.days.filter(d=>d.status==='Нет выхода').length;
+  });
+  
+  // Убираем людей, у которых после фильтров не осталось никаких дней
+  people = people.filter(p => p.days.length > 0);
+
+  // 4. Сортировка результата
+  const cmp = { 
+    name:   (a,b) => a.fio.localeCompare(b.fio,'ru'), 
+    worked: (a,b) => b.worked-a.worked, 
+    late:   (a,b) => b.late-a.late || b.lateN-a.lateN, 
+    miss:   (a,b) => b.miss-a.miss 
+  }[by];
+  people.sort(cmp);
+
+  // Перезаписываем глобальную модель и отрисовываем
+  MODEL = { people: people };
+  paint();
+}
+
+function tieClass(d){
+  const s=d.status;
+  if(s==='Нет выхода') return 'miss'; if(s==='Опоздание') return 'late';
+  if(s==='ОК'||s==='Работа в выходной') return 'ok';
+  if(s==='Выходной') return 'off'; return 'none';
+}
+const stClass = d => ({miss:'miss',late:'late',ok:'ok',off:'off',none:'off'})[tieClass(d)];
+
+function flap(el, text){
+  el.innerHTML = '';
+  const spans = [...text].map(ch=>{ const s=document.createElement('span'); s.className='flap'; s.textContent = ch===' '?NBSP:ch; el.appendChild(s); return s; });
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  const pool='0123456789';
+  spans.forEach((s,i)=>{
+    const goal=s.textContent; if(!/\d/.test(goal)) return; let n = 5 + i*2;
+    const t=setInterval(()=>{ s.textContent = pool[(Math.random()*10)|0]; s.classList.add('flip'); setTimeout(()=>s.classList.remove('flip'),95); if(--n<=0){ clearInterval(t); s.textContent=goal; } },80);
+  });
+}
+
+function renderBoard(){
+  if(!MODEL || !MODEL.people.length) {
+    $('#kpis').innerHTML = '<div style="grid-column: span 5; text-align: center; color: var(--mute); padding: 40px; font-size: 14px; border: 1px dashed var(--glass-border); border-radius: 12px; background: rgba(0,0,0,0.2);">По вашему запросу и фильтрам нет данных</div>';
+    $('#railTies').innerHTML = '';
+    return;
+  }
+  const P=MODEL.people;
+  const items=[
+    {v:fmt(P.reduce((s,p)=>s+p.worked,0)), k:'отработано, ч', a:true},
+    {v:String(P.reduce((s,p)=>s+p.lateN,0)), k:'опозданий'},
+    {v:fmt(P.reduce((s,p)=>s+p.over,0)), k:'переработка, ч'},
+    {v:String(P.reduce((s,p)=>s+p.miss,0)), k:'аномалий'},
+    {v:String(P.length), k:'сотрудников'}
+  ];
+  $('#kpis').innerHTML = items.map(i=> `<div class="kpi${i.a?' accent':''}"><div class="val"></div><div class="lbl">${i.k}</div></div>`).join('');
+  $$('#kpis .val').forEach((el,i)=>setTimeout(()=>flap(el,items[i].v), i*110));
+  $('#railTies').innerHTML = Array.from({length:34},()=>'<i></i>').join('');
+}
+
+function renderAlerts(){
+  const list=[];
+  if(MODEL) {
+    MODEL.people.forEach(p=>{
+      p.days.forEach(d=>{ if(d.status==='Нет выхода') list.push({p, d, kind:'stop', txt:`Нет отметки выхода · вход <b>${fmt(d.inT)}</b>`}); });
+      if(p.lateN>=3) list.push({p, kind:'warn', txt:`Опозданий за период: <b>${p.lateN}</b> · всего <b>${fmt(p.late)}</b>`});
+    });
+  }
+  const box=$('#alerts');
+  if(!list.length){ $('#alertBlock').style.display='none'; return; }
+  $('#alertBlock').style.display=''; $('#alertCount').textContent=list.length;
+  box.innerHTML = list.slice(0,24).map((a,i)=>{
+    const dt = a.d ? `${String(a.d.date.getDate()).padStart(2,'0')}.${String(a.d.date.getMonth()+1).padStart(2,'0')} · ` : '';
+    return `<div class="alert ${a.kind==='warn'?'warn':''}" data-ph="${a.p.phone}"><div class="who">${a.p.fio}</div><div class="what">${dt}${a.txt}</div></div>`;
+  }).join('');
+  $$('#alerts .alert').forEach(el=>el.onclick=()=>openDrawer(el.dataset.ph));
+}
+
+function renderPeople(){
+  const box=$('#people');
+  if(!MODEL || !MODEL.people.length) { 
+    box.innerHTML=''; 
+    $('#peopleCount').textContent=0; 
+    return; 
+  }
+
+  const list = MODEL.people;
+  $('#peopleCount').textContent=list.length;
+  
+  box.innerHTML=list.map((p,i)=>{
+    const ties=p.days.map((d,j)=>{
+      const dt=`${String(d.date.getDate()).padStart(2,'0')}.${String(d.date.getMonth()+1).padStart(2,'0')}`;
+      const tip = d.scans>0 ? `${dt} · ${fmt(d.inT)}–${fmt(d.outT)} · ${d.status}` : `${dt} · ${d.status||'нет данных'}`;
+      return `<i class="tie ${tieClass(d)}" style="animation-delay:${(i*24+j*7)}ms" data-tip="${tip}"></i>`;
+    }).join('');
+    return `<article class="person" data-ph="${p.phone}" tabindex="0" style="animation-delay:${i*38}ms">
+      <div><div class="who-name">${p.fio}</div><div class="who-sub">${p.phone} · отфильтровано дней: ${p.days.length}</div></div>
+      <div class="track"><div class="line"></div><div class="ties">${ties}</div></div>
+      <div class="nums">
+        <div class="num"><div class="v">${fmt(p.worked)}</div><div class="k">отраб.</div></div>
+        <div class="num"><div class="v ${p.late?'warn':'dim'}">${p.lateN||'—'}</div><div class="k">опозд.</div></div>
+        <div class="num"><div class="v ${p.over?'':'dim'}">${fmt(p.over)}</div><div class="k">перераб.</div></div>
+        <div class="num"><div class="v ${p.miss?'stop':'dim'}">${p.miss||'—'}</div><div class="k">аномал.</div></div>
+      </div></article>`;
+  }).join('');
+  $$('#people .person').forEach(el=>{ el.onclick=()=>openDrawer(el.dataset.ph); el.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openDrawer(el.dataset.ph);} }; });
+}
+
+function openDrawer(phone){
+  if(!MODEL) return;
+  const p=MODEL.people.find(x=>x.phone===phone); if(!p) return;
+  $('#dName').textContent=p.fio; $('#dPhone').textContent=`${p.phone}`;
+  $('#dSum').innerHTML=[{v:fmt(p.worked),k:'отработано'},{v:p.lateN||'—',k:'опозданий'},{v:fmt(p.over),k:'переработка'},{v:p.miss||'—',k:'аномалий'}].map(x=>`<div><div class="v">${x.v}</div><div class="k">${x.k}</div></div>`).join('');
+  const shown=p.days.filter(d=>d.scans>0||d.status==='Нет отметок');
+  $('#dDays').innerHTML = shown.length ? shown.map(d=>{
+    const dt=`${String(d.date.getDate()).padStart(2,'0')}.${String(d.date.getMonth()+1).padStart(2,'0')}`;
+    return `<div class="day"><span class="dt">${dt}</span><span class="st ${stClass(d)}">${d.status||'—'}</span><span class="tm ${d.inT?'':'dim'}">${fmt(d.inT)}</span><span class="tm ${d.outT?'':'dim'}">${fmt(d.outT)}</span></div>`;
+  }).join('') : '<div class="empty">За выбранный период отметок нет.</div>';
+  $('#drawer').classList.add('on'); $('#drawer').setAttribute('aria-hidden','false'); $('#scrim').classList.add('on');
+}
+function closeDrawer(){ $('#drawer').classList.remove('on'); $('#drawer').setAttribute('aria-hidden','true'); $('#scrim').classList.remove('on'); }
+
+function paint(){ renderBoard(); renderAlerts(); renderPeople(); }
+
+function setLiveError(errMessage) {
+  const t = $('#liveTag');
+  t.classList.add('err');
+  $('#liveTxt').textContent = 'Ошибка загрузки';
+  t.setAttribute('data-err', errMessage || 'Неизвестная ошибка');
+  $('#srcNote').textContent = 'Данные недоступны. Нажмите "Источник данных".';
+}
+function setLiveSuccess() {
+  const t = $('#liveTag');
+  t.classList.remove('err', 'demo');
+  $('#liveTxt').textContent = 'Данные загружены';
+  t.removeAttribute('data-err');
+  $('#srcNote').textContent = 'Источник: ' + (RAW_DATA.length + ' строк');
+}
+
+async function init(){
+  try { 
+    const res = await fetch(CSV_URL);
+    if(!res.ok) throw new Error(`Браузеру отказано в доступе (Код ${res.status}).`);
+    const text = await res.text();
+    if(text.includes('<html') || text.includes('<!DOCTYPE')) {
+      throw new Error("Вместо данных Google вернул страницу авторизации.\n\nТаблица закрыта от сторонних сайтов.\nИспользуйте ручной ввод через кнопку «Источник данных».");
+    }
+    RAW_DATA = parseDataText(text);
+    if(RAW_DATA.length === 0) throw new Error("Файл загрузился, но данных нет.");
+    setLiveSuccess();
+    applyFilters();
+  } catch(e) { 
+    console.warn('Сбой загрузки:', e);
+    let msg = e.message;
+    if (msg.includes('Failed to fetch')) {
+        msg = "Ваш браузер заблокировал запрос (CORS).\n\nПричина: Google Таблица не опубликована должным образом или требует входа в аккаунт.\n\nРешение: Нажмите кнопку «Источник данных» вверху справа и вставьте данные вручную.";
+    }
+    setLiveError(msg);
+    applyFilters(); 
+  }
+}
+
+// Прикрепляем слушатели КО ВСЕМ фильтрам, чтобы при вводе сразу обновлялось всё
+$$('.filter-trigger').forEach(el => el.addEventListener('input', applyFilters));
+$('#scrim').onclick=closeDrawer; $('#dClose').onclick=closeDrawer;
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeDrawer(); $('#setup').classList.remove('on'); }});
+
+// Логика ручной вставки
+$('#openSetup').onclick=()=>{ $('#setup').classList.add('on'); $('#csvPaste').focus(); };
+$('#setupCancel').onclick=()=>$('#setup').classList.remove('on');
+$('#setupGo').onclick=()=>{
+  const txt = $('#csvPaste').value.trim();
+  const msg = $('#setupMsg'); msg.className='msg';
+  if(!txt) { msg.className='msg err'; msg.textContent='Вставьте данные в поле.'; return; }
+  try {
+    RAW_DATA = parseDataText(txt);
+    if(RAW_DATA.length < 1) throw new Error("Не удалось распознать строки.");
+    setLiveSuccess();
+    applyFilters();
+    $('#setup').classList.remove('on');
+  } catch(err) {
+    msg.className='msg err'; msg.textContent='Ошибка формата. Убедитесь, что вы скопировали таблицу с колонками.';
+  }
+};
+
+init();
+</script>
+</body>
+</html>
